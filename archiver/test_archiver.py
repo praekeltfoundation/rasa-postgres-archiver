@@ -1,18 +1,19 @@
+import gzip
 import json
 import os
 from datetime import date, datetime, timedelta, timezone
-from io import StringIO
-from unittest import TestCase
+from io import BytesIO
+from unittest import TestCase, mock
 
 import psycopg2
 
-from .archiver import create_day_archive
+from . import settings
+from .archiver import create_and_upload_day_archive, create_day_archive
 
 
 class TestArchiver(TestCase):
     def setUp(self):
-        db_url = os.getenv("DATABASE_URL", "postgres://")
-        self.conn = psycopg2.connect(db_url)
+        self.conn = psycopg2.connect(settings.DATABASE)
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -64,7 +65,7 @@ class TestArchiver(TestCase):
         )
         for _ in range(2):
             self.create_event()
-        file = StringIO()
+        file = BytesIO()
         create_day_archive(self.conn, file, date(2020, 12, 2))
         file.seek(0)
         lines = file.readlines()
@@ -82,3 +83,29 @@ class TestArchiver(TestCase):
                     "data": '{"event": "session_started"}',
                 },
             )
+
+    def test_create_and_upload_day_archive(self):
+        """
+        Should create a gzipped line separated json file, and upload that file to S3,
+        and then delete the temporary file
+        """
+        client = mock.MagicMock()
+        global path
+        for _ in range(2):
+            self.create_event()
+
+        def upload_file(filepath, bucket, name):
+            global path
+            path = filepath
+            self.assertEqual(bucket, "rasa-archive")
+            self.assertEqual(name, "events-2020-12-02.json.gz")
+            with gzip.open(filepath) as f:
+                rows = f.readlines()
+                self.assertEqual(len(rows), 2)
+
+        client.upload_file.side_effect = upload_file
+
+        create_and_upload_day_archive(self.conn, client, date(2020, 12, 2))
+
+        client.upload_file.assert_called_once()
+        self.assertFalse(os.path.exists(path))
