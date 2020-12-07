@@ -1,11 +1,12 @@
 import gzip
 import json
-import os
 from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
-from unittest import TestCase, mock
+from unittest import TestCase
 
+import boto3
 import psycopg2
+from moto import mock_s3
 
 from . import settings
 from .archiver import create_and_upload_day_archive, create_day_archive
@@ -84,28 +85,23 @@ class TestArchiver(TestCase):
                 },
             )
 
+    @mock_s3
     def test_create_and_upload_day_archive(self):
         """
         Should create a gzipped line separated json file, and upload that file to S3,
         and then delete the temporary file
         """
-        client = mock.MagicMock()
-        global path
         for _ in range(2):
             self.create_event()
 
-        def upload_file(filepath, bucket, name):
-            global path
-            path = filepath
-            self.assertEqual(bucket, "rasa-archive")
-            self.assertEqual(name, "events-2020-12-02.json.gz")
-            with gzip.open(filepath) as f:
-                rows = f.readlines()
-                self.assertEqual(len(rows), 2)
-
-        client.upload_file.side_effect = upload_file
-
+        client = boto3.resource("s3")
+        client.create_bucket(Bucket="rasa-archive")
         create_and_upload_day_archive(self.conn, client, date(2020, 12, 2))
 
-        client.upload_file.assert_called_once()
-        self.assertFalse(os.path.exists(path))
+        body = (
+            client.Object("rasa-archive", "events-2020-12-02.json.gz")
+            .get()["Body"]
+            .read()
+        )
+        body = gzip.decompress(body).decode("utf-8")
+        self.assertEqual(len(body.strip().split("\n")), 2)

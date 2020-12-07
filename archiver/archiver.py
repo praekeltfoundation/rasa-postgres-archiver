@@ -52,7 +52,7 @@ def create_and_upload_day_archive(psql_conn, s3client, day):
         with gzip.open(filename, "w") as file:
             create_day_archive(psql_conn, file, day)
         logging.info(f"Uploading archive for {day.isoformat()}...")
-        s3client.upload_file(
+        s3client.meta.client.upload_file(
             filename, settings.S3_BUCKET, f"events-{day.isoformat()}.json.gz"
         )
         logging.info(f"Upload complete for {day.isoformat()}.")
