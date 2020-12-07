@@ -1,8 +1,9 @@
 import gzip
 import logging
 import os
+import re
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from . import settings
 
@@ -40,7 +41,7 @@ def create_day_archive(conn, file, day):
     logging.info(f"Created event archive for {day.isoformat()}, {count} total events.")
 
 
-def create_and_upload_day_archive(psql_conn, s3client, day):
+def create_and_upload_day_archive(psql_conn, s3bucket, day):
     """
     Creates a day archive, and uploads it to S3
     psql_conn: postgresql connection
@@ -52,9 +53,19 @@ def create_and_upload_day_archive(psql_conn, s3client, day):
         with gzip.open(filename, "w") as file:
             create_day_archive(psql_conn, file, day)
         logging.info(f"Uploading archive for {day.isoformat()}...")
-        s3client.meta.client.upload_file(
-            filename, settings.S3_BUCKET, f"events-{day.isoformat()}.json.gz"
+        s3bucket.upload_file(
+            filename,
+            f"{settings.S3_KEY_PREFIX}-{day.isoformat()}.json.gz",
         )
         logging.info(f"Upload complete for {day.isoformat()}.")
     finally:
         os.remove(filename)
+
+
+def get_existing_archives(s3bucket):
+    """
+    Returns a generator that yields all the dates of the existing archives
+    """
+    for obj in s3bucket.objects.filter(Prefix=settings.S3_KEY_PREFIX):
+        match = re.match(f"{settings.S3_KEY_PREFIX}-(?P<date>.+)\\.json\\.gz", obj.key)
+        yield date.fromisoformat(match.group("date"))

@@ -33,7 +33,12 @@ Run the auto linting
 ## Configuration
 The following env vars are provided for configuration:
 
-DATABASE - url describing how to connect to the database
-S3_BUCKET - the bucket to upload the archives to
-AWS_ACCESS_KEY_ID - the access key for the AWS account
-AWS_SECRET_ACCESS_KEY - the secret key for the AWS account
+`DATABASE` - url describing how to connect to the database
+
+`S3_BUCKET` - the bucket to upload the archives to
+
+`AWS_ACCESS_KEY_ID` - the access key for the AWS account
+
+`AWS_SECRET_ACCESS_KEY` - the secret key for the AWS account
+
+`S3_KEY_PREFIX` - the prefix to add to S3 keys, defaults to "events", which will create keys like "events-2020-12-02.json.gz"

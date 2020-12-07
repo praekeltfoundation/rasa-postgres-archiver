@@ -9,7 +9,11 @@ import psycopg2
 from moto import mock_s3
 
 from . import settings
-from .archiver import create_and_upload_day_archive, create_day_archive
+from .archiver import (
+    create_and_upload_day_archive,
+    create_day_archive,
+    get_existing_archives,
+)
 
 
 class TestArchiver(TestCase):
@@ -95,13 +99,22 @@ class TestArchiver(TestCase):
             self.create_event()
 
         client = boto3.resource("s3")
-        client.create_bucket(Bucket="rasa-archive")
-        create_and_upload_day_archive(self.conn, client, date(2020, 12, 2))
+        bucket = client.create_bucket(Bucket="rasa-archive")
+        create_and_upload_day_archive(self.conn, bucket, date(2020, 12, 2))
 
-        body = (
-            client.Object("rasa-archive", "events-2020-12-02.json.gz")
-            .get()["Body"]
-            .read()
-        )
+        body = bucket.Object("events-2020-12-02.json.gz").get()["Body"].read()
         body = gzip.decompress(body).decode("utf-8")
         self.assertEqual(len(body.strip().split("\n")), 2)
+
+    @mock_s3
+    def test_get_existing_archives(self):
+        """
+        Should return a generator that yields a list of dates present in S3
+        """
+        client = boto3.resource("s3")
+        bucket = client.create_bucket(Bucket="rasa-archive")
+        bucket.put_object(Key="events-2020-12-02.json.gz")
+        bucket.put_object(Key="events-2020-12-03.json.gz")
+
+        dates = set(get_existing_archives(bucket))
+        self.assertEqual(dates, set([date(2020, 12, 2), date(2020, 12, 3)]))
