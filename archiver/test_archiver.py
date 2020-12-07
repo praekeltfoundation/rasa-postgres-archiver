@@ -2,7 +2,7 @@ import gzip
 import json
 from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
-from unittest import TestCase
+from unittest import TestCase, mock
 
 import boto3
 import psycopg2
@@ -12,6 +12,7 @@ from . import settings
 from .archiver import (
     create_and_upload_day_archive,
     create_day_archive,
+    get_archive_dates,
     get_existing_archives,
     get_oldest_event_timestamp,
 )
@@ -138,3 +139,23 @@ class TestArchiver(TestCase):
 
         timestamp = get_oldest_event_timestamp(self.conn)
         self.assertEqual(timestamp, datetime(2020, 12, 1, tzinfo=timezone.utc))
+
+    @mock_s3
+    @mock.patch("archiver.archiver.date")
+    def test_get_archive_dates(self, date_mock):
+        # We can't mock date.today, we have to mock the whole datetime module
+        # but we still need date.fromisoformat, so we put that back
+        date_mock.today.return_value = date(2020, 12, 3) + timedelta(days=30)
+        date_mock.fromisoformat = date.fromisoformat
+        self.create_event(
+            timestamp=datetime(2020, 12, 1, tzinfo=timezone.utc).timestamp()
+        )
+
+        client = boto3.resource("s3")
+        bucket = client.create_bucket(Bucket="rasa-archive")
+        bucket.put_object(Key="events-2020-12-02.json.gz")
+
+        self.assertEqual(
+            get_archive_dates(self.conn, bucket),
+            set([date(2020, 12, 1), date(2020, 12, 3)]),
+        )

@@ -80,3 +80,20 @@ def get_oldest_event_timestamp(psql_conn):
         [timestamp] = cur.fetchone()
         if timestamp:
             return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+
+
+def get_archive_dates(psql_conn, s3bucket):
+    """
+    Returns a set of all the dates that require an archive
+    """
+    oldest = get_oldest_event_timestamp(psql_conn)
+    if not oldest:
+        return set()
+
+    archive_date = oldest.date()
+    database_dates = set()
+    while archive_date <= date.today() - timedelta(days=settings.RETENTION_DAYS):
+        database_dates.add(archive_date)
+        archive_date += timedelta(days=1)
+
+    return database_dates - set(get_existing_archives(s3bucket))
