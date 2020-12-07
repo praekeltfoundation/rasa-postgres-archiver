@@ -13,6 +13,7 @@ from .archiver import (
     create_and_upload_day_archive,
     create_day_archive,
     get_existing_archives,
+    get_oldest_event_timestamp,
 )
 
 
@@ -118,3 +119,22 @@ class TestArchiver(TestCase):
 
         dates = set(get_existing_archives(bucket))
         self.assertEqual(dates, set([date(2020, 12, 2), date(2020, 12, 3)]))
+
+    def test_get_oldest_timestamp_empty(self):
+        """
+        If there are no results, return None
+        """
+        timestamp = get_oldest_event_timestamp(self.conn)
+        self.assertEqual(timestamp, None)
+
+    def test_get_oldest_timestamp(self):
+        """
+        Returns the oldest timestamp in the database
+        """
+        self.create_event()
+        self.create_event(
+            timestamp=datetime(2020, 12, 1, tzinfo=timezone.utc).timestamp()
+        )
+
+        timestamp = get_oldest_event_timestamp(self.conn)
+        self.assertEqual(timestamp, datetime(2020, 12, 1, tzinfo=timezone.utc))

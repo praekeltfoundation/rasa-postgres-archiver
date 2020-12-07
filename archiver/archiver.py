@@ -69,3 +69,14 @@ def get_existing_archives(s3bucket):
     for obj in s3bucket.objects.filter(Prefix=settings.S3_KEY_PREFIX):
         match = re.match(f"{settings.S3_KEY_PREFIX}-(?P<date>.+)\\.json\\.gz", obj.key)
         yield date.fromisoformat(match.group("date"))
+
+
+def get_oldest_event_timestamp(psql_conn):
+    """
+    Returns the timestamp of the oldest event in the database
+    """
+    with psql_conn.cursor() as cur:
+        cur.execute("SELECT MIN(timestamp) FROM events")
+        [timestamp] = cur.fetchone()
+        if timestamp:
+            return datetime.fromtimestamp(timestamp, tz=timezone.utc)
