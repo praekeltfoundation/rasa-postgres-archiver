@@ -5,7 +5,10 @@ import re
 import tempfile
 from datetime import date, datetime, timedelta, timezone
 
-from . import settings
+from archiver import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_day_archive(conn, file, day):
@@ -19,7 +22,7 @@ def create_day_archive(conn, file, day):
     next_day = day_start + timedelta(days=1)
     count = 0
 
-    logging.info(f"Creating event archive for {day.isoformat()}...")
+    logger.info(f"Creating event archive for {day.isoformat()}...")
 
     with conn.cursor(f"archive-{day.isoformat()}") as cur:
         cur.execute(
@@ -36,9 +39,9 @@ def create_day_archive(conn, file, day):
             file.write("\n".encode("utf-8"))
             count += 1
             if count % 10000 == 0:
-                logging.info(f"Archived {count} events for {day.isoformat()}")
+                logger.info(f"Archived {count} events for {day.isoformat()}")
 
-    logging.info(f"Created event archive for {day.isoformat()}, {count} total events.")
+    logger.info(f"Created event archive for {day.isoformat()}, {count} total events.")
 
 
 def create_and_upload_day_archive(psql_conn, s3bucket, day):
@@ -52,12 +55,12 @@ def create_and_upload_day_archive(psql_conn, s3bucket, day):
     try:
         with gzip.open(filename, "w") as file:
             create_day_archive(psql_conn, file, day)
-        logging.info(f"Uploading archive for {day.isoformat()}...")
+        logger.info(f"Uploading archive for {day.isoformat()}...")
         s3bucket.upload_file(
             filename,
             f"{settings.S3_KEY_PREFIX}-{day.isoformat()}.json.gz",
         )
-        logging.info(f"Upload complete for {day.isoformat()}.")
+        logger.info(f"Upload complete for {day.isoformat()}.")
     finally:
         os.remove(filename)
 
@@ -97,3 +100,12 @@ def get_archive_dates(psql_conn, s3bucket):
         archive_date += timedelta(days=1)
 
     return database_dates - set(get_existing_archives(s3bucket))
+
+
+def create_archives(psql_conn, s3bucket):
+    """
+    Creates archives for all the dates that we need archives for
+    """
+    dates = sorted(get_archive_dates(psql_conn, s3bucket))
+    for day in dates:
+        create_and_upload_day_archive(psql_conn, s3bucket, day)

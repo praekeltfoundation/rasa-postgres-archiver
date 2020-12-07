@@ -8,8 +8,8 @@ import boto3
 import psycopg2
 from moto import mock_s3
 
-from . import settings
-from .archiver import (
+from archiver import settings
+from archiver.archive import (
     create_and_upload_day_archive,
     create_day_archive,
     get_archive_dates,
@@ -141,7 +141,7 @@ class TestArchiver(TestCase):
         self.assertEqual(timestamp, datetime(2020, 12, 1, tzinfo=timezone.utc))
 
     @mock_s3
-    @mock.patch("archiver.archiver.date")
+    @mock.patch("archiver.archive.date")
     def test_get_archive_dates(self, date_mock):
         # We can't mock date.today, we have to mock the whole datetime module
         # but we still need date.fromisoformat, so we put that back

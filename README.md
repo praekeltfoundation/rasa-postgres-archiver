@@ -42,3 +42,7 @@ The following env vars are provided for configuration:
 `AWS_SECRET_ACCESS_KEY` - the secret key for the AWS account
 
 `S3_KEY_PREFIX` - the prefix to add to S3 keys, defaults to "events", which will create keys like "events-2020-12-02.json.gz"
+
+`LOGLEVEL` - The level to log at. Defaults to INFO
+
+`S3_REGION` - The S3 region name.
