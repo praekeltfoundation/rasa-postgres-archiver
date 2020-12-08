@@ -36,4 +36,6 @@ jobs:
           flake8
       - name: Test
         run: |
-          python -m unittest
+          coverage run -m unittest
+          coverage report
+      - uses: codecov/codecov-action@v1
