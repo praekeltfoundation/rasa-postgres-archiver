@@ -1,0 +1,13 @@
+# Docker
+Dockerfile
+.dockerignore
+
+# Git
+.git/
+.github/
+.gitignore
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/test_*.py
