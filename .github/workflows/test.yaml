@@ -1,0 +1,41 @@
+name: Run tests
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:9.6
+        env:
+          POSTGRES_DB: rasa
+          POSTGRES_USER: rasa
+          POSTGRES_PASSWORD: rasa
+        ports:
+          - 5432:5432
+    env:
+      DATABASE: postgres://rasa:rasa@localhost:5432/rasa
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}-pip
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependancies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        run: |
+          black --check .
+          isort -c .
+          flake8
+      - name: Test
+        run: |
+          coverage run -m unittest
+          coverage report
+      - uses: codecov/codecov-action@v1

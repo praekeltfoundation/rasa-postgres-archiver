@@ -19,7 +19,7 @@ Install the requirements
 
 Run the unit tests
 ```bash
-~ python -m unittest
+~ coverage run -m unittest
 ```
 
 Run the auto linting
