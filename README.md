@@ -46,3 +46,5 @@ The following env vars are provided for configuration:
 `LOGLEVEL` - The level to log at. Defaults to INFO
 
 `S3_REGION` - The S3 region name.
+
+`RETENTION_DAYS` - The number of days of data to keep in the database. Defaults to 30

@@ -7,7 +7,6 @@ from datetime import date, datetime, timedelta, timezone
 
 from archiver import settings
 
-
 logger = logging.getLogger(__name__)
 
 
