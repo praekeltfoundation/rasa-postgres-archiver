@@ -5,7 +5,7 @@ from time import sleep
 import boto3
 import psycopg2
 
-from archiver import archive, settings
+from archiver import archive, delete, settings
 
 logging.basicConfig(level=settings.LOGLEVEL)
 logger = logging.getLogger(__name__)
@@ -27,7 +27,9 @@ def loop():
         settings.S3_BUCKET
     )
     while True:
-        archive.create_archives(psql_conn, s3bucket)
+        with psql_conn:
+            archive.create_archives(psql_conn, s3bucket)
+            delete.delete_events(psql_conn, s3bucket)
         sleep_until_midnight()
 
 

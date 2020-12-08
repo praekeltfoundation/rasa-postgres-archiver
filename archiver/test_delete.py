@@ -1,10 +1,12 @@
-from datetime import date, datetime, timezone
-from unittest import TestCase
+from datetime import date, datetime, timedelta, timezone
+from unittest import TestCase, mock
 
+import boto3
 import psycopg2
+from moto import mock_s3
 
 from archiver import settings
-from archiver.delete import delete_day
+from archiver.delete import delete_day, delete_events
 
 
 class TestArchiver(TestCase):
@@ -47,11 +49,40 @@ class TestArchiver(TestCase):
             )
 
     def test_delete_day(self):
+        """
+        Deletes events that fall on the specified day
+        """
         self.create_event()
         self.create_event(
             timestamp=datetime(2020, 12, 3, 14, 5, 2, tzinfo=timezone.utc).timestamp()
         )
         delete_day(self.conn, date(2020, 12, 2))
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT count(*) from events")
+            [count] = cur.fetchone()
+            self.assertEqual(count, 1)
+
+    @mock_s3
+    @mock.patch("archiver.delete.date")
+    def test_delete_events(self, date_mock):
+        """
+        Deletes all events that we have archives for within time range
+        """
+        # We can't mock date.today, we have to mock the whole datetime module
+        # but we still need date.fromisoformat, so we put that back
+        date_mock.today.return_value = date(2020, 12, 3) + timedelta(days=30)
+        date_mock.fromisoformat = date.fromisoformat
+        self.create_event()
+        self.create_event(
+            timestamp=datetime(2020, 12, 3, 14, 5, 2, tzinfo=timezone.utc).timestamp()
+        )
+
+        client = boto3.resource("s3")
+        bucket = client.create_bucket(Bucket="rasa-archive")
+        bucket.put_object(Key="events-2020-12-02.json.gz")
+
+        delete_events(self.conn, bucket)
+
         with self.conn.cursor() as cur:
             cur.execute("SELECT count(*) from events")
             [count] = cur.fetchone()
