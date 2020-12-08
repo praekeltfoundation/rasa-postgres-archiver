@@ -48,3 +48,5 @@ The following env vars are provided for configuration:
 `S3_REGION` - The S3 region name.
 
 `RETENTION_DAYS` - The number of days of data to keep in the database. Defaults to 30
+
+`DELETE` - true if you want to delete data from the database, false if you just want to archive. Defaults to false.
