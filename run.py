@@ -27,8 +27,8 @@ def loop():
         settings.S3_BUCKET
     )
     while True:
-        sleep_until_midnight()
         archive.create_archives(psql_conn, s3bucket)
+        sleep_until_midnight()
 
 
 if __name__ == "__main__":
