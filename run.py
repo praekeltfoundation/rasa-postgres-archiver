@@ -29,7 +29,8 @@ def loop():
     while True:
         with psql_conn:
             archive.create_archives(psql_conn, s3bucket)
-            delete.delete_events(psql_conn, s3bucket)
+            if settings.DELETE:
+                delete.delete_events(psql_conn, s3bucket)
         sleep_until_midnight()
 
 
