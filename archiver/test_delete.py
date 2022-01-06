@@ -87,3 +87,14 @@ class TestArchiver(TestCase):
             cur.execute("SELECT count(*) from events")
             [count] = cur.fetchone()
             self.assertEqual(count, 1)
+
+    @mock_s3
+    def test_delete_with_no_events(self):
+        """
+        Should not raise any exceptions when there is no events to delete
+        """
+
+        client = boto3.resource("s3")
+        bucket = client.create_bucket(Bucket="rasa-archive")
+
+        delete_events(self.conn, bucket)
