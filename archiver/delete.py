@@ -36,7 +36,11 @@ def delete_events(psql_conn, s3bucket):
     """
     Finds which events we already have archives for, and deletes them
     """
-    archive_date = get_oldest_event_timestamp(psql_conn).date()
+    oldest = get_oldest_event_timestamp(psql_conn)
+    if not oldest:
+        return
+
+    archive_date = oldest.date()
     database_dates = set()
     while archive_date <= date.today() - timedelta(days=settings.RETENTION_DAYS):
         database_dates.add(archive_date)
