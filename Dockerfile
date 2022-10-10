@@ -1,4 +1,4 @@
-FROM praekeltfoundation/python-base:3.7
+FROM ghcr.io/praekeltfoundation/python-base-nw:3.9-bullseye
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
